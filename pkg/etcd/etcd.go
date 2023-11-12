@@ -223,7 +223,6 @@ func (e *ETCD) Get(ctx context.Context, key string) (string, uint64, error) {
 }
 
 func (e *ETCD) GetFirst(ctx context.Context, prefix string) (*kvstore.Entry, error) {
-	// get first matching prefix and return entries  as strings
 	resp, err := e.client.Get(ctx, prefix, clientv3.WithPrefix(), clientv3.WithLimit(1))
 	if err != nil {
 		return nil, err
