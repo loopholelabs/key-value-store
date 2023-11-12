@@ -211,15 +211,15 @@ func NewEmbeddded(options *Options, embedded *embed.Etcd, zapLogger *zap.Logger,
 	return e, nil
 }
 
-func (e *ETCD) Get(ctx context.Context, key string) (string, uint64, error) {
+func (e *ETCD) Get(ctx context.Context, key string) ([]byte, uint64, error) {
 	res, err := e.client.Get(ctx, key)
 	if err != nil {
-		return "", 0, errors.Wrap(err, kvstore.ErrGetFailed.Error())
+		return nil, 0, errors.Wrap(err, kvstore.ErrGetFailed.Error())
 	}
 	if res.Count == 0 {
-		return "", 0, errors.Wrap(kvstore.ErrKeyNotFound, kvstore.ErrGetFailed.Error())
+		return nil, 0, errors.Wrap(kvstore.ErrKeyNotFound, kvstore.ErrGetFailed.Error())
 	}
-	return string(res.Kvs[0].Value), uint64(res.Kvs[0].Version), nil
+	return res.Kvs[0].Value, uint64(res.Kvs[0].Version), nil
 }
 
 func (e *ETCD) GetFirst(ctx context.Context, prefix string) (*kvstore.Entry, error) {
@@ -234,7 +234,7 @@ func (e *ETCD) GetFirst(ctx context.Context, prefix string) (*kvstore.Entry, err
 	entry := resp.Kvs[0]
 	return &kvstore.Entry{
 		Key:     unsafe.String(unsafe.SliceData(entry.Key), len(entry.Key)),
-		Value:   unsafe.String(unsafe.SliceData(entry.Value), len(entry.Value)),
+		Value:   entry.Value,
 		Version: uint64(resp.Kvs[0].Version),
 	}, nil
 }
@@ -248,7 +248,7 @@ func (e *ETCD) GetAll(ctx context.Context, prefix string) (kvstore.Entries, erro
 	for i, kv := range resp.Kvs {
 		entries[i] = kvstore.Entry{
 			Key:     unsafe.String(unsafe.SliceData(kv.Key), len(kv.Key)),
-			Value:   unsafe.String(unsafe.SliceData(kv.Value), len(kv.Value)),
+			Value:   kv.Value,
 			Version: uint64(kv.Version),
 		}
 	}
@@ -276,7 +276,7 @@ func (e *ETCD) GetLimit(ctx context.Context, key string, limit int64) (kvstore.E
 	for i, kv := range resp.Kvs {
 		entries[i] = kvstore.Entry{
 			Key:     unsafe.String(unsafe.SliceData(kv.Key), len(kv.Key)),
-			Value:   unsafe.String(unsafe.SliceData(kv.Value), len(kv.Value)),
+			Value:   kv.Value,
 			Version: uint64(kv.Version),
 		}
 	}
@@ -307,13 +307,13 @@ func (e *ETCD) GetBatch(ctx context.Context, keys ...string) (kvstore.Entries, e
 		if len(kv.GetResponseRange().Kvs) > 0 {
 			entries[i] = kvstore.Entry{
 				Key:     unsafe.String(unsafe.SliceData(kv.GetResponseRange().Kvs[0].Key), len(kv.GetResponseRange().Kvs[0].Key)),
-				Value:   unsafe.String(unsafe.SliceData(kv.GetResponseRange().Kvs[0].Value), len(kv.GetResponseRange().Kvs[0].Value)),
+				Value:   kv.GetResponseRange().Kvs[0].Value,
 				Version: uint64(kv.GetResponseRange().Kvs[0].Version),
 			}
 		} else {
 			entries[i] = kvstore.Entry{
 				Key:     keys[i],
-				Value:   "",
+				Value:   nil,
 				Version: 0,
 			}
 		}
@@ -329,8 +329,8 @@ func (e *ETCD) Exists(ctx context.Context, key string) (bool, error) {
 	return resp.Count > 0, nil
 }
 
-func (e *ETCD) Set(ctx context.Context, key string, value string) error {
-	_, err := e.client.Put(ctx, key, value)
+func (e *ETCD) Set(ctx context.Context, key string, value []byte) error {
+	_, err := e.client.Put(ctx, key, unsafe.String(unsafe.SliceData(value), len(value)))
 
 	if err != nil {
 		return errors.Wrap(err, kvstore.ErrSetFailed.Error())
@@ -347,7 +347,7 @@ func (e *ETCD) SetEmpty(ctx context.Context, key string) error {
 	return nil
 }
 
-func (e *ETCD) SetIf(ctx context.Context, key string, value string, condition kvstore.Condition) error {
+func (e *ETCD) SetIf(ctx context.Context, key string, value []byte, condition kvstore.Condition) error {
 	_, version, err := e.Get(ctx, key)
 	if err != nil && !errors.Is(err, kvstore.ErrKeyNotFound) {
 		return errors.Wrap(err, kvstore.ErrSetIfFailed.Error())
@@ -355,15 +355,15 @@ func (e *ETCD) SetIf(ctx context.Context, key string, value string, condition kv
 	if !condition(version) {
 		return errors.Wrap(kvstore.ErrConditionFailed, kvstore.ErrSetIfFailed.Error())
 	}
-	_, err = e.client.Put(ctx, key, value)
+	_, err = e.client.Put(ctx, key, unsafe.String(unsafe.SliceData(value), len(value)))
 	if err != nil {
 		return errors.Wrap(err, kvstore.ErrSetIfFailed.Error())
 	}
 	return nil
 }
 
-func (e *ETCD) SetDelete(ctx context.Context, key string, value string, delete string) error {
-	resp, err := e.client.Txn(ctx).Then(clientv3.OpPut(key, value), clientv3.OpDelete(delete)).Commit()
+func (e *ETCD) SetDelete(ctx context.Context, key string, value []byte, delete string) error {
+	resp, err := e.client.Txn(ctx).Then(clientv3.OpPut(key, unsafe.String(unsafe.SliceData(value), len(value))), clientv3.OpDelete(delete)).Commit()
 	if err != nil {
 		return err
 	}
@@ -373,25 +373,25 @@ func (e *ETCD) SetDelete(ctx context.Context, key string, value string, delete s
 	return nil
 }
 
-func (e *ETCD) SetKeepAlive(ctx context.Context, key string, value string) error {
-	_, err := e.client.Put(ctx, key, value, clientv3.WithLease(e.lease.ID))
+func (e *ETCD) SetKeepAlive(ctx context.Context, key string, value []byte) error {
+	_, err := e.client.Put(ctx, key, unsafe.String(unsafe.SliceData(value), len(value)), clientv3.WithLease(e.lease.ID))
 	return err
 }
 
-func (e *ETCD) SetExpiry(ctx context.Context, key string, value string, ttl time.Duration) error {
+func (e *ETCD) SetExpiry(ctx context.Context, key string, value []byte, ttl time.Duration) error {
 	lease, err := e.client.Grant(ctx, int64(ttl.Seconds()))
 	if err != nil {
 		return err
 	}
-	_, err = e.client.Put(ctx, key, value, clientv3.WithLease(lease.ID))
+	_, err = e.client.Put(ctx, key, unsafe.String(unsafe.SliceData(value), len(value)), clientv3.WithLease(lease.ID))
 	if err != nil {
 		_, _ = e.client.Revoke(ctx, lease.ID)
 	}
 	return err
 }
 
-func (e *ETCD) SetIfNotExist(ctx context.Context, key string, value string) error {
-	resp, err := e.client.Txn(ctx).If(clientv3.Compare(clientv3.Version(key), "=", 0)).Then(clientv3.OpPut(key, value)).Commit()
+func (e *ETCD) SetIfNotExist(ctx context.Context, key string, value []byte) error {
+	resp, err := e.client.Txn(ctx).If(clientv3.Compare(clientv3.Version(key), "=", 0)).Then(clientv3.OpPut(key, unsafe.String(unsafe.SliceData(value), len(value)))).Commit()
 	if err != nil {
 		return errors.Wrap(err, kvstore.ErrSetIfFailed.Error())
 	}
@@ -401,12 +401,12 @@ func (e *ETCD) SetIfNotExist(ctx context.Context, key string, value string) erro
 	return nil
 }
 
-func (e *ETCD) SetIfNotExistExpiry(ctx context.Context, key string, value string, ttl time.Duration) error {
+func (e *ETCD) SetIfNotExistExpiry(ctx context.Context, key string, value []byte, ttl time.Duration) error {
 	lease, err := e.client.Grant(ctx, int64(ttl.Seconds()))
 	if err != nil {
 		return err
 	}
-	resp, err := e.client.Txn(ctx).If(clientv3.Compare(clientv3.Version(key), "=", 0)).Then(clientv3.OpPut(key, value, clientv3.WithLease(lease.ID))).Commit()
+	resp, err := e.client.Txn(ctx).If(clientv3.Compare(clientv3.Version(key), "=", 0)).Then(clientv3.OpPut(key, unsafe.String(unsafe.SliceData(value), len(value)), clientv3.WithLease(lease.ID))).Commit()
 	if err != nil {
 		_, _ = e.client.Revoke(ctx, lease.ID)
 		return err
@@ -455,7 +455,7 @@ func (e *ETCD) Move(ctx context.Context, oldKey string, newKey string) error {
 	}
 	resp, err := e.client.Txn(ctx).
 		Then(
-			clientv3.OpPut(newKey, val),
+			clientv3.OpPut(newKey, unsafe.String(unsafe.SliceData(val), len(val))),
 			clientv3.OpDelete(oldKey),
 		).
 		Commit()
@@ -469,8 +469,8 @@ func (e *ETCD) Move(ctx context.Context, oldKey string, newKey string) error {
 	return nil
 }
 
-func (e *ETCD) MoveReplace(ctx context.Context, oldKey string, newKey string, value string) error {
-	resp, err := e.client.Txn(ctx).Then(clientv3.OpPut(newKey, value), clientv3.OpDelete(oldKey)).Commit()
+func (e *ETCD) MoveReplace(ctx context.Context, oldKey string, newKey string, value []byte) error {
+	resp, err := e.client.Txn(ctx).Then(clientv3.OpPut(newKey, unsafe.String(unsafe.SliceData(value), len(value))), clientv3.OpDelete(oldKey)).Commit()
 	if err != nil {
 		return errors.Wrap(err, kvstore.ErrMoveReplaceFailed.Error())
 	}
@@ -480,7 +480,7 @@ func (e *ETCD) MoveReplace(ctx context.Context, oldKey string, newKey string, va
 	return nil
 }
 
-func (e *ETCD) MoveReplaceIf(ctx context.Context, oldKey string, newKey string, value string, condition kvstore.Condition) error {
+func (e *ETCD) MoveReplaceIf(ctx context.Context, oldKey string, newKey string, value []byte, condition kvstore.Condition) error {
 	_, version, err := e.Get(ctx, oldKey)
 	if err != nil && !errors.Is(err, kvstore.ErrKeyNotFound) {
 		return errors.Wrap(err, kvstore.ErrMoveReplaceFailed.Error())
@@ -488,7 +488,7 @@ func (e *ETCD) MoveReplaceIf(ctx context.Context, oldKey string, newKey string, 
 	if !condition(version) {
 		return errors.Wrap(kvstore.ErrConditionFailed, kvstore.ErrMoveReplaceFailed.Error())
 	}
-	_, err = e.client.Txn(ctx).Then(clientv3.OpDelete(oldKey), clientv3.OpPut(newKey, value)).Commit()
+	_, err = e.client.Txn(ctx).Then(clientv3.OpDelete(oldKey), clientv3.OpPut(newKey, unsafe.String(unsafe.SliceData(value), len(value)))).Commit()
 	if err != nil {
 		return errors.Wrap(err, kvstore.ErrMoveReplaceFailed.Error())
 	}
@@ -518,7 +518,7 @@ func (e *ETCD) Subscribe(ctx context.Context, prefix string, handler kvstore.Sub
 			var err error
 			for _, ev := range r.Events {
 				deleted := ev.Type == clientv3.EventTypeDelete
-				err = handler(unsafe.String(unsafe.SliceData(ev.Kv.Key), len(ev.Kv.Key)), unsafe.String(unsafe.SliceData(ev.Kv.Value), len(ev.Kv.Value)), uint64(ev.Kv.Version), deleted)
+				err = handler(unsafe.String(unsafe.SliceData(ev.Kv.Key), len(ev.Kv.Key)), ev.Kv.Value, uint64(ev.Kv.Version), deleted)
 				if err != nil {
 					return errors.Wrap(err, kvstore.ErrSubscriptionFailed.Error())
 				}

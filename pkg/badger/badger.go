@@ -67,7 +67,7 @@ func New(storageFile string, logger *zerolog.Logger) (*Badger, error) {
 	}, nil
 }
 
-func (b *Badger) Get(ctx context.Context, key string) (string, uint64, error) {
+func (b *Badger) Get(ctx context.Context, key string) ([]byte, uint64, error) {
 	var value []byte
 	var version uint64
 	err := b.db.View(func(txn *badger.Txn) error {
@@ -86,12 +86,12 @@ func (b *Badger) Get(ctx context.Context, key string) (string, uint64, error) {
 
 	if err != nil {
 		if errors.Is(err, badger.ErrKeyNotFound) {
-			return "", 0, errors.Wrap(kvstore.ErrKeyNotFound, kvstore.ErrGetFailed.Error())
+			return nil, 0, errors.Wrap(kvstore.ErrKeyNotFound, kvstore.ErrGetFailed.Error())
 		}
-		return "", 0, errors.Wrap(err, kvstore.ErrGetFailed.Error())
+		return nil, 0, errors.Wrap(err, kvstore.ErrGetFailed.Error())
 	}
 
-	return unsafe.String(unsafe.SliceData(value), len(value)), version, nil
+	return value, version, nil
 }
 
 func (b *Badger) GetFirst(ctx context.Context, prefix string) (*kvstore.Entry, error) {
@@ -111,7 +111,7 @@ func (b *Badger) GetFirst(ctx context.Context, prefix string) (*kvstore.Entry, e
 			}
 			value, err := item.ValueCopy(nil)
 			if err == nil {
-				entry.Value = string(value)
+				entry.Value = value
 			}
 			return err
 		} else {
@@ -141,7 +141,7 @@ func (b *Badger) GetAll(ctx context.Context, prefix string) (kvstore.Entries, er
 				if err != nil {
 					return err
 				}
-				entry.Value = string(val)
+				entry.Value = val
 			}
 			entries = append(entries, entry)
 		}
@@ -193,7 +193,7 @@ func (b *Badger) GetLimit(ctx context.Context, prefix string, limit int64) (kvst
 				if err != nil {
 					return err
 				}
-				entry.Value = string(val)
+				entry.Value = val
 			}
 			entries = append(entries, entry)
 			count++
@@ -226,7 +226,7 @@ func (b *Badger) GetBatch(ctx context.Context, keys ...string) (kvstore.Entries,
 				if err != nil {
 					return err
 				}
-				entry.Value = string(val)
+				entry.Value = val
 			}
 			entries = append(entries, entry)
 		}
@@ -254,7 +254,7 @@ func (b *Badger) Exists(ctx context.Context, key string) (bool, error) {
 	return true, nil
 }
 
-func (b *Badger) Set(ctx context.Context, key string, value string) error {
+func (b *Badger) Set(ctx context.Context, key string, value []byte) error {
 	// TODO: Use value directly instead of copying it
 	//       once the issue is resolved:
 	//       https://discuss.dgraph.io/t/reusing-byte-slice-in-transaction-causes-bugs-with-subscriptions/17204
@@ -282,7 +282,7 @@ func (b *Badger) SetEmpty(ctx context.Context, key string) error {
 	return nil
 }
 
-func (b *Badger) SetIf(ctx context.Context, key string, value string, condition kvstore.Condition) error {
+func (b *Badger) SetIf(ctx context.Context, key string, value []byte, condition kvstore.Condition) error {
 	// TODO: Use value directly instead of copying it
 	//       once the issue is resolved:
 	//       https://discuss.dgraph.io/t/reusing-byte-slice-in-transaction-causes-bugs-with-subscriptions/17204
@@ -314,7 +314,7 @@ func (b *Badger) SetIf(ctx context.Context, key string, value string, condition 
 	return nil
 }
 
-func (b *Badger) SetDelete(ctx context.Context, key string, value string, delete string) error {
+func (b *Badger) SetDelete(ctx context.Context, key string, value []byte, delete string) error {
 	// TODO: Use value directly instead of copying it
 	//       once the issue is resolved:
 	//       https://discuss.dgraph.io/t/reusing-byte-slice-in-transaction-causes-bugs-with-subscriptions/17204
@@ -334,7 +334,7 @@ func (b *Badger) SetDelete(ctx context.Context, key string, value string, delete
 	return nil
 }
 
-func (b *Badger) SetExpiry(ctx context.Context, key string, value string, ttl time.Duration) error {
+func (b *Badger) SetExpiry(ctx context.Context, key string, value []byte, ttl time.Duration) error {
 	// TODO: Use value directly instead of copying it
 	//       once the issue is resolved:
 	//       https://discuss.dgraph.io/t/reusing-byte-slice-in-transaction-causes-bugs-with-subscriptions/17204
@@ -351,7 +351,7 @@ func (b *Badger) SetExpiry(ctx context.Context, key string, value string, ttl ti
 	return nil
 }
 
-func (b *Badger) SetIfNotExist(ctx context.Context, key string, value string) error {
+func (b *Badger) SetIfNotExist(ctx context.Context, key string, value []byte) error {
 	// TODO: Use value directly instead of copying it
 	//       once the issue is resolved:
 	//       https://discuss.dgraph.io/t/reusing-byte-slice-in-transaction-causes-bugs-with-subscriptions/17204
@@ -377,7 +377,7 @@ func (b *Badger) SetIfNotExist(ctx context.Context, key string, value string) er
 	return nil
 }
 
-func (b *Badger) SetIfNotExistExpiry(ctx context.Context, key string, value string, ttl time.Duration) error {
+func (b *Badger) SetIfNotExistExpiry(ctx context.Context, key string, value []byte, ttl time.Duration) error {
 	// TODO: Use value directly instead of copying it
 	//       once the issue is resolved:
 	//       https://discuss.dgraph.io/t/reusing-byte-slice-in-transaction-causes-bugs-with-subscriptions/17204
@@ -515,7 +515,7 @@ func (b *Badger) Move(ctx context.Context, oldKey string, newKey string) error {
 	return nil
 }
 
-func (b *Badger) MoveReplace(ctx context.Context, oldKey string, newKey string, value string) error {
+func (b *Badger) MoveReplace(ctx context.Context, oldKey string, newKey string, value []byte) error {
 	// TODO: Use value directly instead of copying it
 	//       once the issue is resolved:
 	//       https://discuss.dgraph.io/t/reusing-byte-slice-in-transaction-causes-bugs-with-subscriptions/17204
@@ -545,7 +545,7 @@ func (b *Badger) MoveReplace(ctx context.Context, oldKey string, newKey string, 
 	return nil
 }
 
-func (b *Badger) MoveReplaceIf(ctx context.Context, oldKey string, newKey string, value string, condition kvstore.Condition) error {
+func (b *Badger) MoveReplaceIf(ctx context.Context, oldKey string, newKey string, value []byte, condition kvstore.Condition) error {
 	valueCopy := make([]byte, len(value))
 	copy(valueCopy, value)
 	oldKeyBytes := unsafe.Slice(unsafe.StringData(oldKey), len(oldKey))
@@ -589,7 +589,7 @@ func (b *Badger) Subscribe(ctx context.Context, prefix string, handler kvstore.S
 	return b.db.Subscribe(ctx, func(kvs *badger.KVList) (err error) {
 		for _, kv := range kvs.Kv {
 			deleted := kv.Value == nil
-			err = handler(unsafe.String(unsafe.SliceData(kv.Key), len(kv.Key)), unsafe.String(unsafe.SliceData(kv.Value), len(kv.Value)), kv.Version, deleted)
+			err = handler(unsafe.String(unsafe.SliceData(kv.Key), len(kv.Key)), kv.Value, kv.Version, deleted)
 			if err != nil {
 				return errors.Wrap(err, kvstore.ErrSubscriptionFailed.Error())
 			}

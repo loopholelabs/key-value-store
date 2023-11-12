@@ -102,12 +102,12 @@ func TestGetSet(t *testing.T) {
 	RunAll(t, func(db kvstore.KVStore) {
 		ctx := context.Background()
 
-		err := db.Set(ctx, "foo", "bar")
+		err := db.Set(ctx, "foo", []byte("bar"))
 		assert.Nil(t, err)
 
 		val, ver, err := db.Get(ctx, "foo")
 		assert.Nil(t, err)
-		assert.Equal(t, "bar", val)
+		assert.Equal(t, "bar", string(val))
 		assert.Equal(t, uint64(1), ver)
 	})
 }
@@ -115,13 +115,13 @@ func TestGetFirst(t *testing.T) {
 	RunAll(t, func(db kvstore.KVStore) {
 		ctx := context.Background()
 
-		err := db.Set(ctx, "foo123", "bar")
+		err := db.Set(ctx, "foo123", []byte("bar"))
 		assert.Nil(t, err)
 
 		entry, err := db.GetFirst(ctx, "foo")
 		assert.Nil(t, err)
 		assert.Equal(t, "foo123", entry.Key)
-		assert.Equal(t, "bar", entry.Value)
+		assert.Equal(t, "bar", string(entry.Value))
 		assert.Equal(t, uint64(1), entry.Version)
 	})
 }
@@ -130,18 +130,18 @@ func TestGetAll(t *testing.T) {
 	RunAll(t, func(db kvstore.KVStore) {
 		ctx := context.Background()
 
-		err := db.Set(ctx, "foo1", "bar")
+		err := db.Set(ctx, "foo1", []byte("bar"))
 		assert.Nil(t, err)
-		err = db.Set(ctx, "foo2", "baz")
+		err = db.Set(ctx, "foo2", []byte("baz"))
 		assert.Nil(t, err)
 
 		entries, err := db.GetAll(ctx, "foo")
 		assert.Nil(t, err)
 		assert.Equal(t, 2, len(entries))
 		assert.Equal(t, "foo1", entries[0].Key)
-		assert.Equal(t, "bar", entries[0].Value)
+		assert.Equal(t, "bar", string(entries[0].Value))
 		assert.Equal(t, "foo2", entries[1].Key)
-		assert.Equal(t, "baz", entries[1].Value)
+		assert.Equal(t, "baz", string(entries[1].Value))
 	})
 }
 
@@ -149,9 +149,9 @@ func TestGetAllKeys(t *testing.T) {
 	RunAll(t, func(db kvstore.KVStore) {
 		ctx := context.Background()
 
-		err := db.Set(ctx, "foo1", "bar")
+		err := db.Set(ctx, "foo1", []byte("bar"))
 		assert.Nil(t, err)
-		err = db.Set(ctx, "foo2", "baz")
+		err = db.Set(ctx, "foo2", []byte("baz"))
 		assert.Nil(t, err)
 
 		keys, err := db.GetAllKeys(ctx, "foo")
@@ -166,11 +166,11 @@ func TestGetLimit(t *testing.T) {
 	RunAll(t, func(db kvstore.KVStore) {
 		ctx := context.Background()
 
-		err := db.Set(ctx, "foo1", "bar")
+		err := db.Set(ctx, "foo1", []byte("bar"))
 		assert.Nil(t, err)
-		err = db.Set(ctx, "foo2", "baz")
+		err = db.Set(ctx, "foo2", []byte("baz"))
 		assert.Nil(t, err)
-		err = db.Set(ctx, "foo3", "baz")
+		err = db.Set(ctx, "foo3", []byte("baz"))
 		assert.Nil(t, err)
 
 		entries, err := db.GetLimit(ctx, "foo", 2)
@@ -183,11 +183,11 @@ func TestGetBatch(t *testing.T) {
 	RunAll(t, func(db kvstore.KVStore) {
 		ctx := context.Background()
 
-		err := db.Set(ctx, "foo", "1")
+		err := db.Set(ctx, "foo", []byte("1"))
 		assert.Nil(t, err)
-		err = db.Set(ctx, "bar", "2")
+		err = db.Set(ctx, "bar", []byte("2"))
 		assert.Nil(t, err)
-		err = db.Set(ctx, "baz", "3")
+		err = db.Set(ctx, "baz", []byte("3"))
 		assert.Nil(t, err)
 
 		entries, err := db.GetBatch(ctx, "foo", "bar", "baz")
@@ -200,7 +200,7 @@ func TestExists(t *testing.T) {
 	RunAll(t, func(db kvstore.KVStore) {
 		ctx := context.Background()
 
-		err := db.Set(ctx, "foo", "bar")
+		err := db.Set(ctx, "foo", []byte("bar"))
 		assert.Nil(t, err)
 
 		exists, err := db.Exists(ctx, "foo")
@@ -213,12 +213,12 @@ func TestSetEmpty(t *testing.T) {
 	RunAll(t, func(db kvstore.KVStore) {
 		ctx := context.Background()
 
-		err := db.Set(ctx, "foo", "")
+		err := db.Set(ctx, "foo", nil)
 		assert.Nil(t, err)
 
 		val, ver, err := db.Get(ctx, "foo")
 		assert.Nil(t, err)
-		assert.Equal(t, "", val)
+		assert.Nil(t, val)
 		assert.Equal(t, uint64(1), ver)
 	})
 }
@@ -227,17 +227,17 @@ func TestSetIf(t *testing.T) {
 	RunAll(t, func(db kvstore.KVStore) {
 		ctx := context.Background()
 
-		err := db.SetIf(ctx, "foo", "bar", func(v uint64) bool {
+		err := db.SetIf(ctx, "foo", []byte("bar"), func(v uint64) bool {
 			return v == 0
 		})
 		assert.Nil(t, err)
 
 		val, ver, err := db.Get(ctx, "foo")
 		assert.Nil(t, err)
-		assert.Equal(t, "bar", val)
+		assert.Equal(t, "bar", string(val))
 		assert.Equal(t, uint64(1), ver)
 
-		err = db.SetIf(ctx, "foo", "bar", func(v uint64) bool {
+		err = db.SetIf(ctx, "foo", []byte("bar"), func(v uint64) bool {
 			return v == 0
 		})
 		assert.Equal(t, "error during set-if: error during condition", err.Error())
@@ -248,20 +248,20 @@ func TestSetDelete(t *testing.T) {
 	RunAll(t, func(db kvstore.KVStore) {
 		ctx := context.Background()
 
-		err := db.Set(ctx, "foo", "bar")
+		err := db.Set(ctx, "foo", []byte("bar"))
 		assert.Nil(t, err)
 
-		err = db.SetDelete(ctx, "baz", "bar", "foo")
+		err = db.SetDelete(ctx, "baz", []byte("bar"), "foo")
 		assert.Nil(t, err)
 
 		val, ver, err := db.Get(ctx, "foo")
-		assert.Equal(t, "", val)
+		assert.Nil(t, val)
 		assert.Equal(t, "error during get: key not found in storage", err.Error())
 		assert.Equal(t, uint64(0), ver)
 
 		val, _, err = db.Get(ctx, "baz")
 		assert.Nil(t, err)
-		assert.Equal(t, "bar", val)
+		assert.Equal(t, "bar", string(val))
 	})
 }
 
@@ -269,18 +269,18 @@ func TestSetExpiry(t *testing.T) {
 	RunAll(t, func(db kvstore.KVStore) {
 		ctx := context.Background()
 
-		err := db.SetExpiry(ctx, "foo", "bar", time.Second*1)
+		err := db.SetExpiry(ctx, "foo", []byte("bar"), time.Second*1)
 		assert.Nil(t, err)
 
 		val, _, err := db.Get(ctx, "foo")
 		assert.Nil(t, err)
-		assert.Equal(t, "bar", val)
+		assert.Equal(t, "bar", string(val))
 
 		// etcd is slow to release keys after expiry, this test will not reliably pass with a lower wait time
 		time.Sleep(time.Second * 3)
 
 		val, _, err = db.Get(ctx, "foo")
-		assert.Equal(t, "", val)
+		assert.Nil(t, val)
 		assert.Equal(t, "error during get: key not found in storage", err.Error())
 	})
 }
@@ -289,15 +289,15 @@ func TestSetIfNotExist(t *testing.T) {
 	RunAll(t, func(db kvstore.KVStore) {
 		ctx := context.Background()
 
-		err := db.SetIfNotExist(ctx, "foo", "bar")
+		err := db.SetIfNotExist(ctx, "foo", []byte("bar"))
 		assert.Nil(t, err)
 
 		val, ver, err := db.Get(ctx, "foo")
 		assert.Nil(t, err)
-		assert.Equal(t, "bar", val)
+		assert.Equal(t, "bar", string(val))
 		assert.Equal(t, uint64(1), ver)
 
-		err = db.SetIfNotExist(ctx, "foo", "bar")
+		err = db.SetIfNotExist(ctx, "foo", []byte("bar"))
 		assert.Equal(t, "error during set-if: key already exists in storage", err.Error())
 	})
 }
@@ -306,18 +306,18 @@ func TestSetIfNotExistExpiry(t *testing.T) {
 	RunAll(t, func(db kvstore.KVStore) {
 		ctx := context.Background()
 
-		err := db.SetIfNotExistExpiry(ctx, "foo", "bar", time.Second*1)
+		err := db.SetIfNotExistExpiry(ctx, "foo", []byte("bar"), time.Second*1)
 		assert.Nil(t, err)
 
 		val, _, err := db.Get(ctx, "foo")
 		assert.Nil(t, err)
-		assert.Equal(t, "bar", val)
+		assert.Equal(t, "bar", string(val))
 
 		// etcd is slow to release keys after expiry, this test will not reliably pass with a lower wait time
 		time.Sleep(time.Second * 3)
 
 		val, _, err = db.Get(ctx, "foo")
-		assert.Equal(t, "", val)
+		assert.Nil(t, val)
 		assert.Equal(t, "error during get: key not found in storage", err.Error())
 	})
 }
@@ -326,14 +326,14 @@ func TestDelete(t *testing.T) {
 	RunAll(t, func(db kvstore.KVStore) {
 		ctx := context.Background()
 
-		err := db.Set(ctx, "foo", "bar")
+		err := db.Set(ctx, "foo", []byte("bar"))
 		assert.Nil(t, err)
 
 		err = db.Delete(ctx, "foo")
 		assert.Nil(t, err)
 
 		val, ver, err := db.Get(ctx, "foo")
-		assert.Equal(t, "", val)
+		assert.Nil(t, val)
 		assert.Equal(t, "error during get: key not found in storage", err.Error())
 		assert.Equal(t, uint64(0), ver)
 	})
@@ -343,7 +343,7 @@ func TestDeleteIf(t *testing.T) {
 	RunAll(t, func(db kvstore.KVStore) {
 		ctx := context.Background()
 
-		err := db.Set(ctx, "foo", "bar")
+		err := db.Set(ctx, "foo", []byte("bar"))
 		assert.Nil(t, err)
 
 		err = db.DeleteIf(ctx, "foo", func(v uint64) bool {
@@ -352,7 +352,7 @@ func TestDeleteIf(t *testing.T) {
 		assert.Nil(t, err)
 
 		val, ver, err := db.Get(ctx, "foo")
-		assert.Equal(t, "", val)
+		assert.Nil(t, val)
 		assert.Equal(t, "error during get: key not found in storage", err.Error())
 		assert.Equal(t, uint64(0), ver)
 
@@ -367,7 +367,7 @@ func TestDeleteAll(t *testing.T) {
 	RunAll(t, func(db kvstore.KVStore) {
 		ctx := context.Background()
 
-		err := db.Set(ctx, "foo1", "bar")
+		err := db.Set(ctx, "foo1", []byte("bar"))
 		assert.Nil(t, err)
 
 		err = db.DeleteAll(ctx, "foo")
@@ -375,7 +375,7 @@ func TestDeleteAll(t *testing.T) {
 
 		val, ver, err := db.Get(ctx, "foo1")
 		assert.Equal(t, "error during get: key not found in storage", err.Error())
-		assert.Equal(t, "", val)
+		assert.Nil(t, val)
 		assert.Equal(t, uint64(0), ver)
 	})
 }
@@ -384,7 +384,7 @@ func TestMove(t *testing.T) {
 	RunAll(t, func(db kvstore.KVStore) {
 		ctx := context.Background()
 
-		err := db.Set(ctx, "foo", "bar")
+		err := db.Set(ctx, "foo", []byte("bar"))
 		assert.Nil(t, err)
 
 		err = db.Move(ctx, "foo", "bar")
@@ -392,12 +392,12 @@ func TestMove(t *testing.T) {
 
 		val, ver, err := db.Get(ctx, "foo")
 		assert.Equal(t, "error during get: key not found in storage", err.Error())
-		assert.Equal(t, "", val)
+		assert.Nil(t, val)
 		assert.Equal(t, uint64(0), ver)
 
 		val, _, err = db.Get(ctx, "bar")
 		assert.Nil(t, err)
-		assert.Equal(t, "bar", val)
+		assert.Equal(t, "bar", string(val))
 	})
 }
 
@@ -405,20 +405,20 @@ func TestMoveReplace(t *testing.T) {
 	RunAll(t, func(db kvstore.KVStore) {
 		ctx := context.Background()
 
-		err := db.Set(ctx, "foo", "bar")
+		err := db.Set(ctx, "foo", []byte("bar"))
 		assert.Nil(t, err)
 
-		err = db.MoveReplace(ctx, "foo", "bar", "baz")
+		err = db.MoveReplace(ctx, "foo", "bar", []byte("baz"))
 		assert.Nil(t, err)
 
 		val, ver, err := db.Get(ctx, "foo")
 		assert.Equal(t, "error during get: key not found in storage", err.Error())
-		assert.Equal(t, "", val)
+		assert.Nil(t, val)
 		assert.Equal(t, uint64(0), ver)
 
 		val, _, err = db.Get(ctx, "bar")
 		assert.Nil(t, err)
-		assert.Equal(t, "baz", val)
+		assert.Equal(t, "baz", string(val))
 	})
 }
 
@@ -426,24 +426,24 @@ func TestMoveReplaceIf(t *testing.T) {
 	RunAll(t, func(db kvstore.KVStore) {
 		ctx := context.Background()
 
-		err := db.Set(ctx, "foo", "bar")
+		err := db.Set(ctx, "foo", []byte("bar"))
 		assert.Nil(t, err)
 
-		err = db.MoveReplaceIf(ctx, "foo", "bar", "baz", func(v uint64) bool {
+		err = db.MoveReplaceIf(ctx, "foo", "bar", []byte("baz"), func(v uint64) bool {
 			return v == 1
 		})
 		assert.Nil(t, err)
 
 		val, ver, err := db.Get(ctx, "foo")
 		assert.Equal(t, "error during get: key not found in storage", err.Error())
-		assert.Equal(t, "", val)
+		assert.Nil(t, val)
 		assert.Equal(t, uint64(0), ver)
 
 		val, _, err = db.Get(ctx, "bar")
 		assert.Nil(t, err)
-		assert.Equal(t, "baz", val)
+		assert.Equal(t, "baz", string(val))
 
-		err = db.MoveReplaceIf(ctx, " bar", "baz", "foo", func(v uint64) bool {
+		err = db.MoveReplaceIf(ctx, " bar", "baz", []byte("foo"), func(v uint64) bool {
 			return v == 1
 		})
 		assert.Equal(t, "error during move-replace: error during condition", err.Error())
@@ -453,8 +453,8 @@ func TestMoveReplaceIf(t *testing.T) {
 func TestSubscribe(t *testing.T) {
 	RunAll(t, func(db kvstore.KVStore) {
 		received := make(chan bool, 1)
-		handler := func(key, value string, version uint64, deleted bool) error {
-			if key == "foo" && value == "bar" && deleted == false {
+		handler := func(key string, value []byte, version uint64, deleted bool) error {
+			if key == "foo" && string(value) == "bar" && deleted == false {
 				received <- true
 			}
 			return nil
@@ -466,7 +466,7 @@ func TestSubscribe(t *testing.T) {
 			}
 		}()
 
-		err := db.Set(context.Background(), "foo", "bar")
+		err := db.Set(context.Background(), "foo", []byte("bar"))
 		if err != nil {
 			t.Errorf("Set failed: %v", err)
 		}
@@ -485,8 +485,8 @@ func TestSubscribe(t *testing.T) {
 func TestSubscribeDelete(t *testing.T) {
 	RunAll(t, func(db kvstore.KVStore) {
 		received := make(chan bool, 1)
-		handler := func(key, value string, version uint64, deleted bool) error {
-			if key == "foo" && value == "" && deleted == true {
+		handler := func(key string, value []byte, version uint64, deleted bool) error {
+			if key == "foo" && value == nil && deleted == true {
 				received <- true
 			}
 			return nil
@@ -498,7 +498,7 @@ func TestSubscribeDelete(t *testing.T) {
 			}
 		}()
 
-		err := db.Set(context.Background(), "foo", "bar")
+		err := db.Set(context.Background(), "foo", []byte("bar"))
 		if err != nil {
 			t.Errorf("Set failed: %v", err)
 		}
@@ -522,8 +522,8 @@ func TestSubscribeDelete(t *testing.T) {
 func TestSubscribeExpiringKey(t *testing.T) {
 	RunAll(t, func(db kvstore.KVStore) {
 		received := make(chan bool, 1)
-		handler := func(key, value string, version uint64, deleted bool) error {
-			if key == "foo" && value == "" && deleted == true {
+		handler := func(key string, value []byte, version uint64, deleted bool) error {
+			if key == "foo" && value == nil && deleted == true {
 				received <- true
 			}
 			return nil
@@ -535,7 +535,7 @@ func TestSubscribeExpiringKey(t *testing.T) {
 			}
 		}()
 
-		err := db.SetExpiry(context.Background(), "foo", "bar", time.Second*1)
+		err := db.SetExpiry(context.Background(), "foo", []byte("bar"), time.Second*1)
 		if err != nil {
 			t.Errorf("Set failed: %v", err)
 		}

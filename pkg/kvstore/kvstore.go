@@ -47,7 +47,7 @@ var (
 type KVStore interface {
 	// Get retrieves a value given a key. If a key is not found, this method should return NotFoundError,
 	// and any other returned errors should be wrapped in GetError.
-	Get(ctx context.Context, key string) (value string, version uint64, err error)
+	Get(ctx context.Context, key string) (value []byte, version uint64, err error)
 
 	// GetFirst gets the first entry from the DB that matches the prefix. If an error is returned it
 	// should be wrapped in GetFirstError.
@@ -77,32 +77,32 @@ type KVStore interface {
 	Exists(ctx context.Context, key string) (exists bool, err error)
 
 	// Set sets a value given a key. If an error is returned it should be wrapped in SetError.
-	Set(ctx context.Context, key string, value string) (err error)
+	Set(ctx context.Context, key string, value []byte) (err error)
 
 	// SetEmpty sets an empty value given a key. If an error is returned it should be wrapped in SetEmptyError.
 	SetEmpty(ctx context.Context, key string) (err error)
 
 	// SetIf sets a value given a key and a condition. If the condition is not met,
 	// this method should return ConditionError, and any other returned errors should be wrapped in SetError.
-	SetIf(ctx context.Context, key string, value string, condition Condition) (err error)
+	SetIf(ctx context.Context, key string, value []byte, condition Condition) (err error)
 
 	// SetDelete Sets a key to a value and deletes an entry at another key.
 	//If an error is returned it should be wrapped in SetDeleteError.
-	SetDelete(ctx context.Context, key string, value string, delete string) (err error)
+	SetDelete(ctx context.Context, key string, value []byte, delete string) (err error)
 
 	// SetExpiry sets a value given a key and a ttl, the entry will automatically be deleted at the end of the ttl.
 	// ttl should be given in whole seconds, milliseconds may be truncated in certain implementations.
 	// If an error is returned it should be wrapped in SetError.
-	SetExpiry(ctx context.Context, key string, value string, ttl time.Duration) error
+	SetExpiry(ctx context.Context, key string, value []byte, ttl time.Duration) error
 
 	// SetIfNotExist sets a value given a key if the key does not already exist.
 	// If an error is returned it should be wrapped in SetError.
-	SetIfNotExist(ctx context.Context, key string, value string) (err error)
+	SetIfNotExist(ctx context.Context, key string, value []byte) (err error)
 
 	// SetIfNotExistExpiry sets a value given a key if the key does not already exist and sets an expiry.
 	// The entry will automatically be deleted at the end of the ttl.
 	// ttl should be given in whole seconds, milliseconds may be truncated in certain implementations.
-	SetIfNotExistExpiry(ctx context.Context, key string, value string, ttl time.Duration) (err error)
+	SetIfNotExistExpiry(ctx context.Context, key string, value []byte, ttl time.Duration) (err error)
 
 	// Delete deletes a value given a key. If a key is not found, this method should not return an error,
 	// and any other returned errors should be wrapped in DeleteError.
@@ -122,12 +122,12 @@ type KVStore interface {
 
 	// MoveReplace deletes a key and then sets a new key with a new value. If an error is returned it
 	// should be wrapped in MoveReplaceError.
-	MoveReplace(ctx context.Context, oldKey string, newKey string, value string) (err error)
+	MoveReplace(ctx context.Context, oldKey string, newKey string, value []byte) (err error)
 
 	// MoveReplaceIf deletes a key if the given condition returns true, and then sets a new key with a new value.
 	// If the condition is not met, this method should return ConditionError, and any other returned errors
 	// should be wrapped in MoveReplaceError.
-	MoveReplaceIf(ctx context.Context, oldKey string, newKey string, value string, condition Condition) (err error)
+	MoveReplaceIf(ctx context.Context, oldKey string, newKey string, value []byte, condition Condition) (err error)
 
 	// Subscribe subscribes to updates for keys under a given prefix. If an error is returned it
 	// should be wrapped in SubscriptionError.
@@ -147,7 +147,7 @@ type Entry struct {
 	Key string
 
 	// Value is the value for an Entry
-	Value string
+	Value []byte
 
 	// Version is the version of the entry
 	Version uint64
@@ -157,7 +157,7 @@ type Entry struct {
 type Entries []Entry
 
 // SubscriptionHandler is a function that is called when a subscription is triggered
-type SubscriptionHandler func(key string, value string, version uint64, deleted bool) error
+type SubscriptionHandler func(key string, value []byte, version uint64, deleted bool) error
 
 // Condition is a function that returns a boolean value indicating if the condition is met
 type Condition func(version uint64) (condition bool)
