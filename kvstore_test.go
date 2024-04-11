@@ -14,20 +14,21 @@
 	limitations under the License.
 */
 
-package tests
+package kvstore_test
 
 import (
 	"context"
-	"github.com/loopholelabs/kvstore/pkg/badger"
-	"github.com/loopholelabs/kvstore/pkg/etcd"
-	"github.com/loopholelabs/kvstore/pkg/etcd/embedded"
-	kvstore "github.com/loopholelabs/kvstore/pkg/kvstore"
-	"github.com/rs/zerolog"
-	"github.com/stretchr/testify/assert"
-	zap2 "go.uber.org/zap"
 	"os"
 	"testing"
 	"time"
+
+	"github.com/loopholelabs/kvstore"
+	"github.com/loopholelabs/kvstore/pkg/badger"
+	"github.com/loopholelabs/kvstore/pkg/etcd"
+	"github.com/loopholelabs/kvstore/pkg/etcd/embedded"
+	"github.com/rs/zerolog"
+	"github.com/stretchr/testify/assert"
+	zap2 "go.uber.org/zap"
 )
 
 func RunAll(t *testing.T, fn func(db kvstore.KVStore)) {
