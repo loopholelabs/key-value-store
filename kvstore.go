@@ -15,7 +15,7 @@
 */
 
 // Package KVStore outlines how the key value store interface should be defined
-package KVStore
+package kvstore
 
 import (
 	"context"

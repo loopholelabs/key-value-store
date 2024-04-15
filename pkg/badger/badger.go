@@ -24,7 +24,7 @@ import (
 
 	"github.com/dgraph-io/badger/v3"
 	"github.com/dgraph-io/badger/v3/pb"
-	kvstore "github.com/loopholelabs/kvstore/pkg/kvstore"
+	"github.com/loopholelabs/kvstore"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 )

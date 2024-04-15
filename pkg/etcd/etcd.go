@@ -19,20 +19,21 @@ package etcd
 import (
 	"context"
 	"fmt"
-	kvstore "github.com/loopholelabs/kvstore/pkg/kvstore"
-	"github.com/loopholelabs/tls/pkg/config"
-	"github.com/loopholelabs/tls/pkg/loader"
-	"github.com/pkg/errors"
-	"github.com/rs/zerolog"
-	"go.etcd.io/etcd/client/pkg/v3/srv"
-	"go.etcd.io/etcd/client/v3"
-	"go.etcd.io/etcd/server/v3/embed"
-	"go.uber.org/zap"
 	"net"
 	"strings"
 	"sync"
 	"time"
 	"unsafe"
+
+	"github.com/loopholelabs/kvstore"
+	"github.com/loopholelabs/tls/pkg/config"
+	"github.com/loopholelabs/tls/pkg/loader"
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog"
+	"go.etcd.io/etcd/client/pkg/v3/srv"
+	clientv3 "go.etcd.io/etcd/client/v3"
+	"go.etcd.io/etcd/server/v3/embed"
+	"go.uber.org/zap"
 )
 
 var _ kvstore.KVStore = (*ETCD)(nil)
