@@ -27,7 +27,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestLibp2p(t *testing.T) {
+func TestLibp2pKVStore(t *testing.T) {
 	pnet := make([]byte, 32)
 	rand.Read(pnet)
 
@@ -109,5 +109,76 @@ func TestLibp2p(t *testing.T) {
 	val2_2, err := l2.Mydht.GetValue(ctx, key2)
 	assert.NoError(t, err)
 	assert.Equal(t, value2, val2_2)
+
+}
+
+func TestLibp2pPubsub(t *testing.T) {
+	pnet := make([]byte, 32)
+	rand.Read(pnet)
+
+	c1 := &Libp2pConfig{
+		Pnet:            hex.EncodeToString(pnet),
+		Privkey:         "",
+		ListenPort:      22022,
+		Bootstrap:       make([]string, 0),
+		ListenAddresses: make([]string, 0),
+	}
+
+	c2 := &Libp2pConfig{
+		Pnet:            hex.EncodeToString(pnet),
+		Privkey:         "",
+		ListenPort:      22033,
+		Bootstrap:       make([]string, 0),
+		ListenAddresses: make([]string, 0),
+	}
+
+	ctx, cancelfunc := context.WithCancel(context.Background())
+
+	l1, err := New(ctx, c1)
+	assert.NoError(t, err)
+
+	l2, err := New(ctx, c2)
+	assert.NoError(t, err)
+
+	t.Cleanup(func() {
+		cancelfunc()
+	})
+
+	host2 := peer.AddrInfo{
+		ID:    l2.Myhost.ID(),
+		Addrs: l2.Myhost.Addrs(),
+	}
+
+	err = l1.Myhost.Connect(ctx, host2)
+	assert.NoError(t, err)
+
+	// peer1 should be connected to peer2 now...
+
+	topic1, err := l1.Mypubsub.Join("/loophole/topic1")
+	assert.NoError(t, err)
+
+	topic2, err := l2.Mypubsub.Join("/loophole/topic1")
+	assert.NoError(t, err)
+
+	sub1, err := topic1.Subscribe()
+	assert.NoError(t, err)
+
+	sub2, err := topic2.Subscribe()
+	assert.NoError(t, err)
+
+	// Send something
+	data := []byte("Hello world")
+	err = topic1.Publish(ctx, data)
+	assert.NoError(t, err)
+
+	msg1, err := sub1.Next(ctx)
+	assert.NoError(t, err)
+	assert.Equal(t, data, msg1.Data)
+	assert.Equal(t, []byte(l1.Myhost.ID()), msg1.From)
+
+	msg2, err := sub2.Next(ctx)
+	assert.NoError(t, err)
+	assert.Equal(t, data, msg2.Data)
+	assert.Equal(t, []byte(l1.Myhost.ID()), msg2.From)
 
 }
