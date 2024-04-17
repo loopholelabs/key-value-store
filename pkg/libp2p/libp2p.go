@@ -50,9 +50,8 @@ func (lv *LoopValidator) Select(key string, values [][]byte) (int, error) {
 	return 0, nil
 }
 
-// Allow anything here...
+// Allow anything here atm...
 func (lv *LoopValidator) Validate(key string, value []byte) error {
-	fmt.Printf("LoopValidator %s\n", key)
 	return nil
 }
 
@@ -99,14 +98,14 @@ func New(ctx context.Context, conf *Libp2pConfig) (*Libp2p, error) {
 		}
 		fmt.Printf("Generated new p2p keypair %s\n", hex.EncodeToString(privbytes))
 	}
-	/*
-		pnetkey, err := hex.DecodeString(conf.Pnet)
-		if err != nil {
-			return nil, err
-		}
+	var pnetkey []byte
+	pnetkey, err := hex.DecodeString(conf.Pnet)
+	if err != nil {
+		return nil, err
+	}
 
-		fmt.Printf("Connecting to p2p network using pnet key %s\n", conf.Pnet)
-	*/
+	fmt.Printf("Connecting to p2p network using pnet key %s\n", conf.Pnet)
+
 	loopvalid := &LoopValidator{}
 
 	makerFunc := func(h host.Host) (routing.PeerRouting, error) {
@@ -142,7 +141,7 @@ func New(ctx context.Context, conf *Libp2pConfig) (*Libp2p, error) {
 		),
 		//libp2p.DefaultTransports,
 		libp2p.UserAgent("loopholelabs"),
-		//		libp2p.PrivateNetwork(pnetkey),
+		libp2p.PrivateNetwork(pnetkey),
 		libp2p.Routing(makerFunc),
 		//		libp2p.EnableAutoRelay(),
 		libp2p.NATPortMap(),
@@ -159,18 +158,11 @@ func New(ctx context.Context, conf *Libp2pConfig) (*Libp2p, error) {
 	if err != nil {
 		return nil, err
 	}
-	/*
-		err = l.Mydht.Bootstrap(ctx)
-		if err != nil {
-			return nil, err
-		}
 
-		cc := l.Mydht.RefreshRoutingTable()
-		err = <-cc
-		if err != nil {
-			return nil, err
-		}
-	*/
+	err = l.Mydht.Bootstrap(ctx)
+	if err != nil {
+		return nil, err
+	}
 
 	// Wrap the host so it can route to addresses it doesn't know
 	l.Myhost = routedhost.Wrap(basichost, l.Mydht)
