@@ -21,7 +21,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net"
 	"net/http"
 	"strings"
@@ -151,9 +151,12 @@ func New(ctx context.Context, conf *Libp2pConfig) (*Libp2p, error) {
 		return nil, err
 	}
 
+	ds := NewTestDataStore()
+
 	l.Mydht, err = dht.New(ctx, basichost,
 		dht.Mode(dht.ModeServer),
 		dht.NamespacedValidator("loophole", loopvalid),
+		dht.Datastore(ds),
 		dht.ProtocolPrefix(protocol.ID("/loophole")))
 	if err != nil {
 		return nil, err
@@ -216,7 +219,7 @@ func GetAdvertiseAddress(port int) (string, error) {
 		return "", errors.New(fmt.Sprintf("IP lookup is giving us error %s", resp.Status))
 	}
 
-	bodybytes, err := ioutil.ReadAll(resp.Body)
+	bodybytes, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", err
 	}
